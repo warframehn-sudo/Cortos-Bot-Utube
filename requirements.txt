@@ -1,22 +1,12 @@
-# Credenciales — NUNCA subir a GitHub
-credentials/
-*.json
-!requirements*.json
-
-# Output generado
-output/
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.venv/
-venv/
-env/
-
-# Sistema
-.DS_Store
-*.log
-.env
+anthropic
+feedparser
+requests
+moviepy
+Pillow
+gTTS
+pydub
+numpy
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
