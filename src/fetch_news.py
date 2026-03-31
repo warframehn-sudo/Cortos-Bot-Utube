@@ -2,7 +2,7 @@ import feedparser
 import json
 import os
 from datetime import datetime, timedelta
-from google import genai
+from groq import Groq
 
 RSS_FEEDS = [
     "https://venturebeat.com/category/ai/feed/",
@@ -71,26 +71,30 @@ def pick_best_news(articles):
     if not articles:
         raise ValueError("No hay noticias disponibles")
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
     titles = "\n".join(
         f"{i+1}. {a['title']} (fuente: {a['source']})"
         for i, a in enumerate(articles)
     )
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=(
-            f"Eres un editor de YouTube Shorts de tecnologia. "
-            f"De estas noticias de IA/Tech, elige el NUMERO (solo el numero) "
-            f"de la mas viral e interesante para un Short de YouTube de 60 segundos:\n\n"
-            f"{titles}\n\n"
-            f"Responde SOLO con el numero."
-        )
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Eres un editor de YouTube Shorts de tecnologia. "
+                f"De estas noticias de IA/Tech, elige el NUMERO (solo el numero) "
+                f"de la mas viral e interesante para un Short de YouTube de 60 segundos:\n\n"
+                f"{titles}\n\n"
+                f"Responde SOLO con el numero, nada mas."
+            )
+        }],
+        max_tokens=10,
     )
 
     try:
-        idx = int(response.text.strip()) - 1
+        idx = int(response.choices[0].message.content.strip()) - 1
         idx = max(0, min(idx, len(articles) - 1))
     except Exception:
         idx = 0
@@ -101,18 +105,20 @@ def pick_best_news(articles):
 
 
 def generate_script(article):
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=f"""Eres un guionista experto en YouTube Shorts de tecnologia viral.
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{
+            "role": "user",
+            "content": f"""Eres un guionista experto en YouTube Shorts de tecnologia viral.
 Crea un guion para un Short de 50-60 segundos sobre esta noticia:
 
 TITULO: {article['title']}
 RESUMEN: {article['summary']}
 FUENTE: {article['source']}
 
-Formato JSON exacto (sin markdown, solo JSON puro):
+Responde SOLO con JSON puro, sin markdown, sin explicaciones:
 {{
   "titulo_video": "titulo llamativo con emoji para YouTube (max 60 chars)",
   "descripcion": "descripcion SEO con hashtags (max 200 chars)",
@@ -125,10 +131,12 @@ Formato JSON exacto (sin markdown, solo JSON puro):
   "llamada_accion": "frase final para que den like y se suscriban"
 }}
 
-Maximo 10 escenas, total 55 segundos. Que sea emocionante, informativo y viral."""
+Maximo 10 escenas, total 55 segundos."""
+        }],
+        max_tokens=1500,
     )
 
-    raw = response.text.strip()
+    raw = response.choices[0].message.content.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
