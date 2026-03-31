@@ -1,0 +1,53 @@
+name: AI Shorts Bot
+
+on:
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "Modo prueba (no sube a YouTube)"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Instalar FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core libsm6 libxext6
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+      - name: Crear directorios
+        run: mkdir -p output output/frames output/audio
+      - name: Generar guion con Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python src/fetch_news.py
+      - name: Generar video
+        run: python src/generate_video.py
+      - name: Subir a YouTube
+        if: ${{ github.event.inputs.test_mode != 'true' }}
+        env:
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
+        run: python src/upload_youtube.py
+      - name: Guardar video
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: short-video-${{ github.run_number }}
+          path: |
+            output/short_final.mp4
+            output/script.json
+          retention-days: 7
