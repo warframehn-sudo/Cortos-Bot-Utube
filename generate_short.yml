@@ -1,0 +1,153 @@
+# 🤖 AI Shorts Bot — YouTube Shorts Automatizados de Noticias de IA
+
+Bot completamente automatizado que genera y publica YouTube Shorts diarios sobre las últimas noticias de Inteligencia Artificial, GPU gaming (Nvidia/AMD) y herramientas generativas de IA — **sin pagar nada**.
+
+## ✨ ¿Qué hace exactamente?
+
+Cada día a las 10:00 UTC, GitHub Actions:
+
+1. **Busca noticias** de IA desde 11 feeds RSS gratuitos (TechCrunch, VentureBeat, The Verge, Tom's Hardware, OpenAI Blog, Google AI Blog, etc.)
+2. **Elige la mejor noticia** usando Claude Haiku (modelo rápido y económico)
+3. **Genera el guión** completo del Short con escenas, texto en pantalla y narración
+4. **Crea las imágenes** con [Pollinations.ai](https://pollinations.ai) — completamente gratis, sin API key
+5. **Narra el video** con Google Text-to-Speech (gTTS) en español
+6. **Ensambla el video** vertical (1080×1920) con MoviePy + FFmpeg
+7. **Sube automáticamente** a YouTube como Short público
+
+## 💰 Costo Total: $0
+
+| Servicio | Uso | Costo |
+|---|---|---|
+| GitHub Actions | 2000 min/mes gratis | **$0** |
+| Anthropic Claude | Free tier disponible | **$0** |
+| Pollinations.ai | API pública sin límites | **$0** |
+| Google TTS (gTTS) | Gratis vía web | **$0** |
+| YouTube Data API | 10,000 unidades/día gratis | **$0** |
+
+## 🚀 Instalación Paso a Paso
+
+### Paso 1: Fork del repositorio
+
+1. Ve a GitHub y haz fork de este repositorio
+2. En tu fork: `Settings → Actions → General → Allow all actions`
+
+### Paso 2: Obtener API Key de Anthropic (gratis)
+
+1. Ve a [console.anthropic.com](https://console.anthropic.com)
+2. Crea una cuenta gratuita
+3. Ve a `API Keys → Create Key`
+4. Copia la key (empieza con `sk-ant-...`)
+
+### Paso 3: Configurar YouTube API
+
+#### 3a. Crear proyecto en Google Cloud (gratis)
+1. Ve a [console.cloud.google.com](https://console.cloud.google.com)
+2. `Crear proyecto` → dale un nombre (ej: "ai-shorts-bot")
+3. `APIs y servicios → Biblioteca`
+4. Busca "YouTube Data API v3" → **Habilitar**
+
+#### 3b. Crear credenciales OAuth2
+1. `APIs → Credenciales → Crear credenciales → ID de cliente OAuth 2.0`
+2. Tipo: **Aplicación de escritorio**
+3. Descarga el JSON → guárdalo como `credentials/client_secrets.json`
+
+#### 3c. Autenticación (solo una vez, en tu PC)
+```bash
+# Clonar tu fork
+git clone https://github.com/TU_USUARIO/ai-shorts-bot
+cd ai-shorts-bot
+
+# Instalar dependencias
+pip install google-auth-oauthlib google-api-python-client
+
+# Correr autenticación
+python src/auth_youtube.py
+```
+
+Se abrirá el navegador → autoriza con tu cuenta de YouTube → copia el JSON que aparece en la terminal.
+
+### Paso 4: Agregar Secrets a GitHub
+
+En tu repositorio: `Settings → Secrets and variables → Actions → New repository secret`
+
+| Secret Name | Valor |
+|---|---|
+| `ANTHROPIC_API_KEY` | Tu API key de Anthropic |
+| `YOUTUBE_TOKEN` | El JSON generado en el paso 3c |
+
+### Paso 5: Probar manualmente
+
+1. Ve a `Actions → AI Shorts Bot → Run workflow`
+2. Activa `test_mode = true` para probar sin subir a YouTube
+3. Revisa el video en el artifact descargable
+
+## 📅 Frecuencia de Publicación
+
+Por defecto: **1 Short por día** a las 10:00 UTC.
+
+Para cambiar la frecuencia, edita `.github/workflows/generate_short.yml`:
+
+```yaml
+schedule:
+  # Cada 12 horas (2 shorts/día):
+  - cron: "0 */12 * * *"
+  
+  # Solo días laborables:
+  - cron: "0 10 * * 1-5"
+  
+  # 3 veces por semana:
+  - cron: "0 10 * * 1,3,5"
+```
+
+## 🎯 Temas Cubiertos
+
+El bot busca noticias sobre:
+
+- **Modelos de IA**: ChatGPT, Claude, Gemini, Grok, Llama, Mistral, etc.
+- **Generadores de video**: Sora, Kling, Runway, Pika
+- **Generadores de imagen**: DALL-E, Midjourney, Stable Diffusion, Flux
+- **Generadores de audio/música**: ElevenLabs, Suno, Udio
+- **GPU Gaming**: Nvidia RTX, AMD Radeon, DLSS, FSR, Ray Tracing
+- **Open Source**: Nuevos modelos y herramientas open source
+
+## 📁 Estructura del Proyecto
+
+```
+ai-shorts-bot/
+├── .github/
+│   └── workflows/
+│       └── generate_short.yml    # Automatización GitHub Actions
+├── src/
+│   ├── fetch_news.py             # Busca noticias + genera guión (Claude)
+│   ├── generate_video.py         # Crea el video (Pollinations + MoviePy)
+│   ├── upload_youtube.py         # Sube a YouTube
+│   └── auth_youtube.py           # Autenticación única (ejecutar solo 1 vez)
+├── credentials/                  # NO subir a git (en .gitignore)
+│   ├── client_secrets.json
+│   └── youtube_token.json
+├── output/                       # Generado automáticamente
+├── requirements.txt
+└── README.md
+```
+
+## ⚠️ Notas Importantes
+
+- El `credentials/` y `output/` están en `.gitignore` — nunca se suben a GitHub
+- El token de YouTube dura ~1 hora pero se renueva automáticamente con el refresh_token
+- Pollinations.ai puede tardar 30-60 segundos por imagen (es gratis, ten paciencia)
+- YouTube puede tardar hasta 1 hora en procesar el Short después de subido
+
+## 🐛 Solución de Problemas
+
+**Error: "Credenciales de YouTube inválidas"**
+→ El refresh token expiró. Corre `python src/auth_youtube.py` de nuevo y actualiza el secret `YOUTUBE_TOKEN`.
+
+**Error: "No hay noticias disponibles"**
+→ Todos los feeds fallaron. Verifica tu conexión o agrega más feeds RSS en `fetch_news.py`.
+
+**Video se genera pero YouTube lo rechaza**
+→ Verifica que el video sea vertical (9:16) y dure menos de 60 segundos.
+
+## 📜 Licencia
+
+MIT — úsalo, modifícalo y compártelo libremente.
