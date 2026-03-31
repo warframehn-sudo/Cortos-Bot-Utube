@@ -1,9 +1,8 @@
 import feedparser
-import random
 import json
 import os
 from datetime import datetime, timedelta
-import google.generativeai as genai
+from google import genai
 
 RSS_FEEDS = [
     "https://venturebeat.com/category/ai/feed/",
@@ -42,11 +41,9 @@ def fetch_recent_news(hours_back=48):
                     pub_dt = datetime(*pub[:6])
                     if pub_dt < cutoff:
                         continue
-
                 title = entry.get("title", "")
                 summary = entry.get("summary", "")[:500]
                 link = entry.get("link", "")
-
                 text_lower = (title + " " + summary).lower()
                 if any(kw in text_lower for kw in KEYWORDS):
                     articles.append({
@@ -74,20 +71,22 @@ def pick_best_news(articles):
     if not articles:
         raise ValueError("No hay noticias disponibles")
 
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     titles = "\n".join(
         f"{i+1}. {a['title']} (fuente: {a['source']})"
         for i, a in enumerate(articles)
     )
 
-    response = model.generate_content(
-        f"Eres un editor de YouTube Shorts de tecnologia. "
-        f"De estas noticias de IA/Tech, elige el NUMERO (solo el numero) "
-        f"de la mas viral e interesante para un Short de YouTube de 60 segundos:\n\n"
-        f"{titles}\n\n"
-        f"Responde SOLO con el numero."
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=(
+            f"Eres un editor de YouTube Shorts de tecnologia. "
+            f"De estas noticias de IA/Tech, elige el NUMERO (solo el numero) "
+            f"de la mas viral e interesante para un Short de YouTube de 60 segundos:\n\n"
+            f"{titles}\n\n"
+            f"Responde SOLO con el numero."
+        )
     )
 
     try:
@@ -102,11 +101,11 @@ def pick_best_news(articles):
 
 
 def generate_script(article):
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-    response = model.generate_content(
-        f"""Eres un guionista experto en YouTube Shorts de tecnologia viral.
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=f"""Eres un guionista experto en YouTube Shorts de tecnologia viral.
 Crea un guion para un Short de 50-60 segundos sobre esta noticia:
 
 TITULO: {article['title']}
