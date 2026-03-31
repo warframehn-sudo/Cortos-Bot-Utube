@@ -33,7 +33,7 @@ jobs:
         run: mkdir -p output output/frames output/audio
       - name: Generar guion con Claude
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python src/fetch_news.py
       - name: Generar video
         run: python src/generate_video.py
