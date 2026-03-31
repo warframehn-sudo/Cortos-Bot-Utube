@@ -1,6 +1,6 @@
 feedparser
 requests
-moviepy
+moviepy==1.0.3
 Pillow
 gTTS
 pydub
